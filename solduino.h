@@ -2,10 +2,10 @@
 #define SOLDUINO_H
 
 // Include all Solduino SDK headers
-#include "keypair.h"
-#include "serializer.h"
-#include "transaction.h"
-#include "rpc_client.h"
-#include "crypto.h"
+#include "src/keypair.h"
+#include "src/serializer.h"
+#include "src/transaction.h"
+#include "src/rpc_client.h"
+#include "src/crypto.h"
 
 #endif // SOLDUINO_H 
