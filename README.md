@@ -1,119 +1,141 @@
 # Solduino
 
-A minimal Solana SDK for ESP32 and Arduino platforms, optimized for memory-constrained devices.
+A minimal, memory-efficient Solana SDK for ESP32 and Arduino platforms. Solduino enables you to interact with the Solana blockchain directly from your embedded devices.
 
 ## Features
 
-- 📡 Native Solana transaction support for IoT devices
-- 🔑 Ed25519 keypair generation and management
-- 📦 Borsh serialization for Solana transactions
-- 🌐 HTTP RPC client for Solana DevNet
-- 💾 Memory-optimized for embedded systems (~320KB RAM)
-- 🔒 Security-focused implementation
+- **Optimized for Embedded Systems**
+  - Static buffer usage to avoid heap fragmentation
+  - Minimal RAM footprint (~32KB required)
+  - Hardware-accelerated cryptography on ESP32
+
+- **Core Functionality**
+  - Ed25519 key generation and management
+  - Transaction signing and verification
+  - Secure key storage using SPIFFS
+  - SPL Token support
+  - Custom program interaction
+
+- **Platform-Specific Optimizations**
+  - ESP32: Hardware-accelerated SHA-512 via mbedtls
+  - ESP32: Hardware random number generator
+  - Arduino: Optimized software implementations
+  - Arduino: Enhanced random number generation
 
 ## Requirements
 
-- Arduino IDE 2.0.0 or higher
+### ESP32
 - ESP32 board support package
-- ArduinoJson library (for JSON streaming)
-- WiFiClientSecure (included with ESP32)
+- ESP-IDF (for mbedtls)
+- At least 32KB RAM
+- WiFi connection for network operations
+
+### Arduino
+- Arduino board with at least 32KB RAM
+- SHA512 library (install via Library Manager)
+- Sufficient flash storage for program
 
 ## Installation
 
-### Using Arduino IDE Library Manager
+1. Clone this repository:
+```bash
+git clone https://github.com/yourusername/solduino.git
+```
 
-1. Open Arduino IDE
-2. Go to `Sketch > Include Library > Manage Libraries`
-3. Search for "Solduino"
-4. Click Install
+2. Copy the `src` folder to your Arduino libraries directory:
+```bash
+cp -r src ~/Arduino/libraries/solduino
+```
 
-### Manual Installation
-
-1. Download this repository
-2. Extract to your Arduino libraries folder:
-   - Windows: `Documents\Arduino\libraries\`
-   - Mac: `~/Documents/Arduino/libraries/`
-   - Linux: `~/Arduino/libraries/`
-3. Restart Arduino IDE
+3. Install required dependencies:
+   - For ESP32: No additional libraries needed
+   - For Arduino: Install SHA512 library from Library Manager
 
 ## Usage
 
-### Basic Example: Sending SOL
+### Basic Example
 
 ```cpp
 #include <solduino.h>
 
-// Initialize keypair from seed
-uint8_t seed[32] = { /* your seed */ };
-Keypair keypair;
-keypair_from_seed(&keypair, seed);
-
-// Initialize RPC client
-RpcClient rpc;
-rpc_client_init(&rpc, "https://api.devnet.solana.com");
-
-// Create and send transaction
-void sendSol(const char* recipient, uint64_t amount_lamports) {
-    Transaction tx;
-    uint8_t recent_blockhash[32];
+void setup() {
+    unsigned char public_key[32];
+    unsigned char private_key[64];
     
-    // Get recent blockhash
-    rpc_client_get_recent_blockhash(&rpc, recent_blockhash, sizeof(recent_blockhash));
+    // Generate a new keypair
+    crypto_sign_keypair(public_key, private_key);
     
-    // Create transfer transaction
-    transaction_create_transfer(&tx, keypair.publicKey, recipient, amount_lamports, recent_blockhash);
+    // Sign a message
+    const char* message = "Hello Solana!";
+    unsigned char signature[64];
+    unsigned long long siglen;
     
-    // Sign and send
-    uint8_t signature[64];
-    crypto_sign_message(tx.message, tx.message_len, keypair.secretKey, signature);
-    transaction_add_signature(&tx, signature);
-    
-    // Serialize and send
-    uint8_t serialized_tx[1024];
-    size_t serialized_size;
-    transaction_serialize(&tx, serialized_tx, sizeof(serialized_tx), &serialized_size);
-    
-    char signature_str[89];
-    rpc_client_send_transaction(&rpc, serialized_tx, serialized_size, signature_str, sizeof(signature_str));
+    crypto_sign_detached(
+        signature,
+        &siglen,
+        (unsigned char*)message,
+        strlen(message),
+        private_key
+    );
 }
 ```
 
+### Advanced Examples
+
+Check the `examples` directory for:
+- `ed25519_sign.ino`: Basic signing example for Arduino
+- `esp32_solana_sign.ino`: ESP32-specific example with hardware acceleration
+- More examples coming soon!
+
+## Implementation Details
+
+### Cryptographic Operations
+
+The library uses an optimized version of TweetNaCl for Ed25519 operations:
+- Hardware-accelerated SHA-512 on ESP32
+- Optimized field arithmetic for 32-bit processors
+- Memory-efficient implementation
+
+### Key Storage
+
+- ESP32: Uses SPIFFS for secure key storage
+- Arduino: Configurable storage options (EEPROM/SD)
+- Key derivation from seed phrases (coming soon)
+
 ### Memory Management
 
-The SDK uses static buffers to avoid heap fragmentation:
-
-```cpp
-#define SOLDUINO_MAX_SERIALIZED_SIZE 1024
-#define SOLDUINO_MAX_URL_LENGTH 128
-#define SOLDUINO_MAX_RESPONSE_SIZE 2048
-```
-
-Adjust these values in the headers based on your device's memory constraints.
+- Static buffers for cryptographic operations
+- No dynamic memory allocation
+- Optimized for embedded constraints
+- Careful stack usage
 
 ## Security Considerations
 
-1. Never hardcode private keys in your code
-2. Use secure storage (SPIFFS/EEPROM) for sensitive data
-3. Consider using a hardware secure element if available
-4. Keep your device's firmware updated
-5. Use TLS for RPC connections
+1. **Key Management**
+   - Never hardcode private keys
+   - Use secure storage (SPIFFS/EEPROM)
+   - Consider hardware security modules
 
-## Examples
+2. **Random Number Generation**
+   - ESP32: Hardware RNG used
+   - Arduino: Enhanced seeding mechanism
+   - Avoid predictable seeds
 
-Check the `examples/` directory for more sample code:
-
-- `transfer_sol.ino`: Basic SOL transfer
-- `create_account.ino`: Create a new account
-- `token_transfer.ino`: SPL token transfer
+3. **Network Security**
+   - Use secure connections (HTTPS/WSS)
+   - Validate all RPC responses
+   - Handle network errors gracefully
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+Contributions are welcome! Please read our contributing guidelines before submitting pull requests.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License - see LICENSE file for details
+
+## Acknowledgments
+
+- TweetNaCl: For the compact crypto implementation
+- Solana Labs: For the blockchain platform
+- ESP32 Community: For hardware acceleration support
