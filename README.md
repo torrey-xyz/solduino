@@ -133,9 +133,3 @@ Contributions are welcome! Please read our contributing guidelines before submit
 ## License
 
 MIT License - see LICENSE file for details
-
-## Acknowledgments
-
-- TweetNaCl: For the compact crypto implementation
-- Solana Labs: For the blockchain platform
-- ESP32 Community: For hardware acceleration support
