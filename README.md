@@ -117,9 +117,3 @@ Check the `examples/` directory for more sample code:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Solana Labs for the protocol specification
-- TweetNaCl.js for the Ed25519 implementation
-- Arduino community for embedded development insights
