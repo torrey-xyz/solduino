@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📧 Email Support
+    url: mailto:parvat.raj2@gmail.com
+    about: Contact the maintainer directly via email
+  - name: 💬 Discussion
+    url: https://github.com/torrey-xyz/solduino/discussions
+    about: Ask questions and discuss ideas with the community
