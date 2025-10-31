@@ -8,8 +8,10 @@ Solduino is a comprehensive embedded software development kit (SDK) for interact
 ## Features
 
 - ✅ **RPC Communication**: Full-featured Solana RPC client for ESP32
-- ✅ **Wallet Generation**: Generate and manage Solana keypairs
-- ✅ **Transaction Signing**: Sign and send Solana transactions
+- ✅ **Wallet Generation**: Generate and manage Solana keypairs with Ed25519
+- ✅ **Transaction Signing**: Build, sign, and serialize Solana transactions
+- ✅ **Transaction Serialization**: Serialize transactions to Solana wire format
+- ✅ **Message Signing**: Sign messages with Ed25519 keypairs
 - ✅ **HTTPS Support**: Secure connections using WiFiClientSecure
 - ✅ **Arduino Compatible**: Works with Arduino IDE and PlatformIO
 
@@ -145,9 +147,25 @@ sol/
 │
 ├── connection.h              # Connection Management Module
 │
+├── keypair.h                 # Wallet Generation Module (header)
+├── keypair.cpp               # Wallet Generation Module (implementation)
+├── crypto.h                  # Cryptographic Utilities (header)
+├── crypto.cpp                # Cryptographic Utilities (implementation)
+│
+├── transaction.h             # Transaction Module (header)
+├── transaction.cpp           # Transaction Module (implementation)
+├── serializer.h              # Transaction Serialization Module (header)
+├── serializer.cpp            # Transaction Serialization Module (implementation)
+│
 └── examples/
-    └── basic_rpc_demo/
-        └── basic_rpc_demo.ino  # Comprehensive example sketch
+    ├── basic_rpc_demo/
+    │   └── basic_rpc_demo.ino        # Basic RPC operations example
+    ├── wallet_demo/
+    │   └── wallet_demo.ino           # Wallet generation and management example
+    └── transaction_demo/
+        ├── transaction_demo.ino      # Transaction creation and signing example
+        ├── transfer_demo.ino         # SOL transfer example
+        └── airdrop_demo.ino          # Airdrop request example
 ```
 
 ### Component Details
@@ -237,18 +255,17 @@ String balance = client.getBalance(publicKey);
 **Purpose**: Generate and manage Solana keypairs on embedded devices.
 
 **Features**:
-- Ed25519 keypair generation (simplified implementation)
-- Import wallets from private keys (Base58 format)
+- Ed25519 keypair generation using hardware random number generator
+- Import wallets from private keys (bytes or Base58 format)
 - Import wallets from seeds
 - Public/private key management
 - Base58 encoding/decoding for Solana addresses
-- Message signing
+- Message signing with Ed25519
+- Signature verification
 
 **Files**: 
 - `keypair.h` / `keypair.cpp` - Keypair class for wallet management
-- `crypto.h` / `crypto.cpp` - Cryptographic utilities (Base58, Ed25519)
-
-**⚠️ Important Note**: The current implementation uses simplified cryptographic functions for demonstration. For production use, integrate a proper Ed25519 library such as libsodium or tweetnacl.
+- `crypto.h` / `crypto.cpp` - Cryptographic utilities (Base58, Ed25519, SHA-512)
 
 **Usage:**
 ```cpp
@@ -263,6 +280,10 @@ char address[64];
 keypair.getPublicKeyAddress(address, sizeof(address));
 Serial.println(address);
 
+// Get private key (Base58)
+char privateKey[128];
+keypair.getPrivateKeyBase58(privateKey, sizeof(privateKey));
+
 // Import from private key (Base58)
 Keypair imported;
 imported.importFromPrivateKeyBase58("YourPrivateKeyBase58");
@@ -276,28 +297,99 @@ imported.importFromSeed(seed);
 String message = "Hello, Solana!";
 uint8_t signature[64];
 keypair.signString(message, signature);
+
+// Verify a signature
+bool isValid = keypair.verify((uint8_t*)message.c_str(), message.length(), signature);
 ```
 
-##### Module 4: Transaction Signing (Planned)
+##### Module 4: Transaction Signing (`transaction.h` / `transaction.cpp`)
 
-**Purpose**: Build, sign, and serialize Solana transactions.
+**Purpose**: Build and sign Solana transactions.
 
-**Planned Features**:
-- Transaction construction
-- Instruction building
-- Transaction signing with keypairs
-- Base58/base64 encoding
-- Serialization for RPC submission
+**Features**:
+- Transaction construction with multiple instructions
+- Built-in transfer instruction helper
+- Custom instruction support
+- Transaction signing with single or multiple keypairs
+- Message building with accounts and blockhash
+- Account management (signers, writable, readonly)
 
-**Files**: To be implemented (`transaction.h`, `serializer.h`)
+**Files**: 
+- `transaction.h` / `transaction.cpp` - Transaction and Message classes
+
+**Key Classes**:
+- `Transaction` - Main transaction class
+- `Message` - Transaction message builder
+- `Instruction` - Instruction representation
 
 **Usage:**
 ```cpp
+#include <solduino.h>
+
+// Create a transfer transaction
 Transaction tx;
-tx.addInstruction(instruction);
+uint8_t fromPubkey[32], toPubkey[32];
+
+// Get blockhash from RPC
+String blockhashStr = client.getLatestBlockhash();
+// Parse blockhash to bytes...
+
+// Add transfer instruction
+tx.addTransferInstruction(fromPubkey, toPubkey, 1000000); // 1 SOL
+
+// Set recent blockhash
 tx.setRecentBlockhash(blockhash);
-tx.sign(keypair);
-String serialized = tx.serialize();
+
+// Sign transaction
+tx.sign(privateKey, fromPubkey);
+
+// Or sign with multiple keypairs
+const uint8_t* privateKeys[] = {keypair1Private, keypair2Private};
+const uint8_t* publicKeys[] = {keypair1Public, keypair2Public};
+tx.signMultiple(privateKeys, publicKeys, 2);
+```
+
+##### Module 5: Transaction Serialization (`serializer.h` / `serializer.cpp`)
+
+**Purpose**: Serialize Solana transactions to wire format for RPC submission.
+
+**Features**:
+- Serialize transactions to Solana compact array format
+- Base64 encoding for RPC submission
+- Base58 encoding support
+- Message serialization
+- Size calculation for buffer allocation
+
+**Files**: 
+- `serializer.h` / `serializer.cpp` - TransactionSerializer and Base64 classes
+
+**Key Classes**:
+- `TransactionSerializer` - Transaction serialization utilities
+- `Base64` - Base64 encoding/decoding utilities
+
+**Usage:**
+```cpp
+#include <solduino.h>
+
+// After creating and signing a transaction
+Transaction tx;
+// ... build and sign transaction ...
+
+// Serialize to base64 (for RPC submission)
+char serializedTx[2048];
+if (TransactionSerializer::encodeTransaction(tx, serializedTx, sizeof(serializedTx))) {
+    // Send to RPC
+    String result = client.sendTransaction(String(serializedTx));
+}
+
+// Or serialize to raw bytes first
+uint8_t buffer[2048];
+uint16_t serializedLen;
+if (TransactionSerializer::serializeTransaction(tx, buffer, sizeof(buffer), serializedLen)) {
+    // Encode to base64
+    char base64[4096];
+    Base64::encode(buffer, serializedLen, base64, sizeof(base64));
+}
 ```
 
 #### 3. Setup Instructions
@@ -317,6 +409,8 @@ Complete setup instructions are provided in the [Installation](#installation) se
 solduino.h (Core SDK)
 ├── Includes: rpc_client.h
 ├── Includes: connection.h
+├── Includes: crypto.h, keypair.h
+├── Includes: transaction.h, serializer.h
 └── Provides: Constants, Version Info
 
 rpc_client.h (RPC Module)
@@ -324,6 +418,18 @@ rpc_client.h (RPC Module)
 ├── Depends on: HTTPClient (ESP32)
 ├── Depends on: ArduinoJson
 └── Used by: connection.h
+
+keypair.h (Wallet Module)
+├── Depends on: crypto.h
+└── Provides: Keypair management
+
+transaction.h (Transaction Module)
+├── Depends on: crypto.h
+└── Used by: serializer.h
+
+serializer.h (Serializer Module)
+├── Depends on: transaction.h
+└── Provides: Transaction serialization
 
 connection.h (Connection Module)
 ├── Depends on: rpc_client.h
@@ -366,25 +472,24 @@ Version string format: `"MAJOR.MINOR.PATCH"`
 
 ### Future Enhancements
 
-- [ ] Implement wallet generation module
-- [ ] Implement transaction signing module
 - [ ] Add WebSocket support for real-time subscriptions
 - [ ] Add certificate validation for production use
 - [ ] Add secure key storage support
-- [ ] Add transaction building helpers
-- [ ] Add instruction builders
-- [ ] Add token transfer utilities
-- [ ] Add program interaction helpers
+- [ ] Add more instruction builders (token transfers, program interactions)
+- [ ] Add transaction simulation support
+- [ ] Add account data parsing utilities
 
 ## Examples
 
 ### Example 1: Basic RPC Calls
 
+See `examples/basic_rpc_demo/basic_rpc_demo.ino` for a complete example.
+
 ```cpp
 #include <WiFi.h>
-#include <rpc_client.h>
+#include <solduino.h>
 
-RpcClient client("https://api.devnet.solana.com");
+RpcClient client(SOLDUINO_DEVNET_RPC);
 
 void setup() {
     // ... WiFi setup ...
@@ -400,7 +505,83 @@ void setup() {
 }
 ```
 
-### Example 2: Network Monitoring
+### Example 2: Wallet Generation and Management
+
+See `examples/wallet_demo/wallet_demo.ino` for a complete example.
+
+```cpp
+#include <solduino.h>
+
+void setup() {
+    Serial.begin(115200);
+    
+    // Generate new keypair
+    Keypair keypair;
+    if (keypair.generate()) {
+        char address[64];
+        keypair.getPublicKeyAddress(address, sizeof(address));
+        Serial.println("New wallet address: " + String(address));
+        
+        // Sign a message
+        String message = "Hello, Solana!";
+        uint8_t signature[64];
+        if (keypair.signString(message, signature)) {
+            // Verify signature
+            bool isValid = keypair.verify((uint8_t*)message.c_str(), message.length(), signature);
+            Serial.println("Signature valid: " + String(isValid));
+        }
+    }
+}
+```
+
+### Example 3: Create and Send Transaction
+
+See `examples/transaction_demo/transaction_demo.ino` for a complete example.
+
+```cpp
+#include <WiFi.h>
+#include <solduino.h>
+
+RpcClient client(SOLDUINO_DEVNET_RPC);
+Keypair sender, receiver;
+
+void setup() {
+    // ... WiFi setup ...
+    client.begin();
+    
+    // Generate keypairs
+    sender.generate();
+    receiver.generate();
+    
+    // Get blockhash
+    String blockhashStr = client.getLatestBlockhash();
+    // Parse blockhash...
+    uint8_t blockhash[32];
+    
+    // Create transfer transaction
+    Transaction tx;
+    uint8_t fromPubkey[32], toPubkey[32];
+    sender.getPublicKey(fromPubkey);
+    receiver.getPublicKey(toPubkey);
+    
+    tx.addTransferInstruction(fromPubkey, toPubkey, 1000000); // 1 SOL
+    tx.setRecentBlockhash(blockhash);
+    
+    // Sign transaction
+    uint8_t privateKey[64];
+    sender.getPrivateKey(privateKey);
+    tx.sign(privateKey, fromPubkey);
+    
+    // Serialize and send
+    char serializedTx[2048];
+    if (TransactionSerializer::encodeTransaction(tx, serializedTx, sizeof(serializedTx))) {
+        String result = client.sendTransaction(String(serializedTx));
+        Serial.println("Transaction sent: " + result);
+    }
+}
+```
+
+### Example 4: Network Monitoring
 
 ```cpp
 void monitorNetwork() {
@@ -412,15 +593,6 @@ void monitorNetwork() {
     Serial.println("Slot: " + slot);
     Serial.println("Version: " + version);
 }
-```
-
-### Example 3: Transaction Submission
-
-```cpp
-// After signing a transaction
-String serializedTx = "base64_encoded_transaction";
-String result = client.sendTransaction(serializedTx);
-Serial.println("Transaction submitted: " + result);
 ```
 
 ## API Reference
@@ -476,6 +648,84 @@ bool parseBalance(const String& jsonResponse, Balance& balance);
 bool parseBlockInfo(const String& jsonResponse, BlockInfo& info);
 bool parseTransaction(const String& jsonResponse, TransactionResponse& tx);
 ```
+
+### Keypair Class
+
+#### Constructor
+```cpp
+Keypair()
+```
+
+#### Methods
+
+**Key Generation and Import**
+- `bool generate()` - Generate a new random keypair
+- `bool importFromPrivateKey(const uint8_t* privateKeyBytes)` - Import from 64-byte private key
+- `bool importFromPrivateKeyBase58(const char* privateKeyBase58)` - Import from Base58 private key
+- `bool importFromSeed(const uint8_t* seed)` - Import from 32-byte seed
+
+**Key Retrieval**
+- `bool getPublicKey(uint8_t* output) const` - Get public key as bytes (32 bytes)
+- `bool getPrivateKey(uint8_t* output) const` - Get private key as bytes (64 bytes)
+- `bool getPublicKeyAddress(char* address, size_t addressLen) const` - Get public key as Base58 address
+- `bool getPrivateKeyBase58(char* output, size_t outputLen) const` - Get private key as Base58 string
+
+**Signing and Verification**
+- `bool sign(const uint8_t* message, size_t messageLen, uint8_t* signature) const` - Sign message
+- `bool signString(const String& message, uint8_t* signature) const` - Sign string message
+- `bool verify(const uint8_t* message, size_t messageLen, const uint8_t* signature) const` - Verify signature
+
+**Utility**
+- `bool isInitialized() const` - Check if keypair is initialized
+- `void clear()` - Clear keypair (zero out keys)
+- `void printAddress() const` - Print address to Serial
+
+### Transaction Class
+
+#### Constructor
+```cpp
+Transaction()
+```
+
+#### Methods
+
+**Transaction Building**
+- `bool addTransferInstruction(const uint8_t* from, const uint8_t* to, uint64_t amount)` - Add SOL transfer instruction
+- `bool addInstruction(const uint8_t* programId, const uint8_t* accounts[], uint8_t accountCount, const uint8_t* data, uint16_t dataLength)` - Add custom instruction
+- `bool setRecentBlockhash(const uint8_t* blockhash)` - Set recent blockhash (32 bytes)
+
+**Transaction Signing**
+- `bool sign(const uint8_t* privateKey, const uint8_t* publicKey)` - Sign with single keypair
+- `bool signMultiple(const uint8_t* privateKeys[], const uint8_t* publicKeys[], uint8_t count)` - Sign with multiple keypairs
+
+**Transaction Information**
+- `Message& getMessage()` - Get transaction message
+- `uint8_t getSignatureCount() const` - Get number of signatures
+- `bool getSignature(uint8_t index, uint8_t* signature) const` - Get signature by index
+- `bool isValidTransaction() const` - Check if transaction is valid
+- `void reset()` - Reset transaction
+
+### TransactionSerializer Class
+
+#### Methods
+
+**Serialization**
+- `static bool serializeMessage(const Message& message, uint8_t* buffer, uint16_t bufferLen, uint16_t& serializedLen)` - Serialize message to wire format
+- `static bool serializeTransaction(const Transaction& transaction, uint8_t* buffer, uint16_t bufferLen, uint16_t& serializedLen)` - Serialize transaction to wire format
+
+**Encoding**
+- `static bool encodeTransaction(const Transaction& transaction, char* output, size_t outputLen)` - Encode transaction to Base64
+- `static bool encodeTransactionBase58(const Transaction& transaction, char* output, size_t outputLen)` - Encode transaction to Base58
+
+**Size Calculation**
+- `static uint16_t calculateMessageSize(const Message& message)` - Calculate message size
+- `static uint16_t calculateTransactionSize(const Transaction& transaction)` - Calculate transaction size
+
+### Base64 Class
+
+#### Methods
+- `static size_t encode(const uint8_t* data, size_t dataLen, char* output, size_t outputLen)` - Encode bytes to Base64
+- `static size_t decode(const char* input, uint8_t* output, size_t outputLen)` - Decode Base64 to bytes
 
 ## Configuration
 
@@ -592,6 +842,11 @@ For issues, questions, or contributions:
 - HTTPS support with WiFiClientSecure
 - Basic account and transaction operations
 - Network monitoring functions
+- Wallet generation with Ed25519
+- Transaction creation and signing
+- Transaction serialization (wire format, Base64, Base58)
+- Message signing and verification
+- Complete example sketches for RPC, wallet, and transactions
 
 ---
 
