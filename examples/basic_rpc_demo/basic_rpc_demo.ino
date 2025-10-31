@@ -11,11 +11,29 @@
  * 
  * Required Libraries:
  * - ArduinoJson (via Library Manager)
+ * - Solduino library (includes TweetNaCl)
+ * 
+ * Security Notes:
+ * - Uses ESP32 hardware random number generator for key generation
+ * - Uses Ed25519 for transaction signing
+ * - Private keys are stored securely in memory
+ * - Never log or expose private keys in production code
+ * - This demo uses devnet/localnet - no real SOL is involved
  * 
  * Setup:
  * 1. Update WiFi credentials below
  * 2. Select ESP32 board in Arduino IDE
  * 3. Upload to ESP32
+ * 4. Open Serial Monitor at 115200 baud
+ * 
+ * For LOCALNET Testing:
+ * - Start solana-test-validator: solana-test-validator --bind-address 0.0.0.0
+ * - Find your computer's IP address:
+ *     macOS/Linux: ifconfig | grep "inet " | grep -v 127.0.0.1
+ *     Windows: ipconfig | findstr IPv4
+ * - Replace "localhost" with your computer's IP address
+ * - Example: Use "http://192.168.1.100:8899" or "http://172.17.53.216:8899"
+ * - ESP32 and computer must be on the same WiFi network
  */
 
 #include <WiFi.h>
