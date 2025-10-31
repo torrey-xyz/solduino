@@ -171,8 +171,8 @@ static bool waitForBalanceMin(const char* address, uint64_t minLamports, uint32_
 static bool waitForSignatureConfirmed(const String& sig, uint32_t timeoutMs) {
     uint32_t start = millis();
     while (millis() - start < timeoutMs) {
-        String tx = rpcClient.getTransaction(sig);
-        if (tx.length() > 0 && tx.indexOf("\"result\"") >= 0 && tx.indexOf("\"slot\"") >= 0) {
+        TransactionResponse tx;
+        if (rpcClient.getTransaction(sig, tx)) {
             return true;
         }
         delay(POLL_INTERVAL_MS);
@@ -289,11 +289,6 @@ void demonstrateTransfer() {
          Serial.println("   ✗ Failed to encode transaction");
          return;
      }
-     
-     Serial.println("   ✓ Transaction encoded");
-     Serial.println("\n=== Base58 Transaction (for Postman testing) ===");
-     Serial.println(g_txBase64);
-     Serial.println("==================================================\n");
      
      transaction.reset();
      

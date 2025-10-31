@@ -37,8 +37,7 @@ bool RpcClient::begin() {
     
     // Don't initialize http here - initialize it in makeRpcRequest for each request
     // This ensures we get a fresh connection each time
-    String health = getHealth();
-    return health.indexOf("ok") >= 0 || health.indexOf("\"ok\"") >= 0;
+    return getHealth();
 }
 
 void RpcClient::end() {
@@ -138,9 +137,16 @@ void RpcClient::logError(const String& message) {
     Serial.println("[RPC_ERROR] " + message);
 }
 
-String RpcClient::getAccountInfo(const String& publicKey) {
+bool RpcClient::getAccountInfo(const String& publicKey, AccountInfo& info) {
     String params = "[\"" + publicKey + "\", {\"encoding\": \"base64\"}]";
-    return makeRpcRequest("getAccountInfo", params);
+    String response = makeRpcRequest("getAccountInfo", params);
+    
+    if (response.length() == 0) {
+        return false;
+    }
+    
+    // Use the existing parseAccountInfo function
+    return parseAccountInfo(response, info);
 }
 
 String RpcClient::getBalance(const String& publicKey) {
@@ -176,20 +182,100 @@ uint64_t RpcClient::getBalanceLamports(const String& publicKey) {
     return balance;
 }
 
-String RpcClient::getBlockHeight() {
-    return makeRpcRequest("getBlockHeight");
+uint64_t RpcClient::getBlockHeight() {
+    String response = makeRpcRequest("getBlockHeight");
+    
+    if (response.length() == 0) {
+        return 0;
+    }
+    
+    DynamicJsonDocument doc(512);
+    DeserializationError error = deserializeJson(doc, response);
+    
+    if (error) {
+        return 0;
+    }
+    
+    if (!doc.containsKey("result")) {
+        return 0;
+    }
+    
+    return doc["result"].as<uint64_t>();
 }
 
-String RpcClient::getSlot() {
-    return makeRpcRequest("getSlot");
+uint64_t RpcClient::getSlot() {
+    String response = makeRpcRequest("getSlot");
+    
+    if (response.length() == 0) {
+        return 0;
+    }
+    
+    DynamicJsonDocument doc(512);
+    DeserializationError error = deserializeJson(doc, response);
+    
+    if (error) {
+        return 0;
+    }
+    
+    if (!doc.containsKey("result")) {
+        return 0;
+    }
+    
+    return doc["result"].as<uint64_t>();
 }
 
 String RpcClient::getVersion() {
-    return makeRpcRequest("getVersion");
+    String response = makeRpcRequest("getVersion");
+    
+    if (response.length() == 0) {
+        return "";
+    }
+    
+    DynamicJsonDocument doc(512);
+    DeserializationError error = deserializeJson(doc, response);
+    
+    if (error) {
+        return "";
+    }
+    
+    if (!doc.containsKey("result")) {
+        return "";
+    }
+    
+    // Extract version from result - typically "solana-core" field
+    if (doc["result"].containsKey("solana-core")) {
+        return doc["result"]["solana-core"].as<String>();
+    }
+    
+    return "";
 }
 
-String RpcClient::getHealth() {
-    return makeRpcRequest("getHealth");
+bool RpcClient::getHealth() {
+    String response = makeRpcRequest("getHealth");
+    
+    if (response.length() == 0) {
+        return false;
+    }
+    
+    // Health endpoint returns "ok" as plain text or {"jsonrpc":"2.0","result":"ok"}
+    if (response.indexOf("ok") >= 0) {
+        return true;
+    }
+    
+    // Try parsing as JSON
+    DynamicJsonDocument doc(512);
+    DeserializationError error = deserializeJson(doc, response);
+    
+    if (error) {
+        return false;
+    }
+    
+    if (doc.containsKey("result")) {
+        String result = doc["result"].as<String>();
+        return result == "ok";
+    }
+    
+    return false;
 }
 
 String RpcClient::sendTransaction(const String& transaction) {
@@ -202,9 +288,27 @@ String RpcClient::sendTransactionBase58(const String& transaction) {
     return makeRpcRequest("sendTransaction", params);
 }
 
-String RpcClient::getTransaction(const String& signature) {
+bool RpcClient::getTransaction(const String& signature, TransactionResponse& tx) {
     String params = "[\"" + signature + "\", {\"encoding\": \"base64\"}]";
-    return makeRpcRequest("getTransaction", params);
+    String response = makeRpcRequest("getTransaction", params);
+    
+    if (response.length() == 0) {
+        return false;
+    }
+    
+    // Check for error in response before parsing
+    DynamicJsonDocument errorDoc(512);
+    DeserializationError error = deserializeJson(errorDoc, response);
+    if (!error && errorDoc.containsKey("error")) {
+        // RPC error occurred
+        return false;
+    }
+    
+    // Set signature (we already have it)
+    tx.signature = signature;
+    
+    // Use the existing parseTransaction function
+    return parseTransaction(response, tx);
 }
 
 String RpcClient::getConfirmedTransaction(const String& signature) {
@@ -212,10 +316,25 @@ String RpcClient::getConfirmedTransaction(const String& signature) {
     return makeRpcRequest("getConfirmedTransaction", params);
 }
 
-String RpcClient::getBlock(uint64_t slot) {
+bool RpcClient::getBlock(uint64_t slot, BlockInfo& info) {
     // Include maxSupportedTransactionVersion: 0 to support versioned transactions
     String params = "[" + String(slot) + ", {\"encoding\": \"base64\", \"maxSupportedTransactionVersion\": 0}]";
-    return makeRpcRequest("getBlock", params);
+    String response = makeRpcRequest("getBlock", params);
+    
+    if (response.length() == 0) {
+        return false;
+    }
+    
+    // Check for error in response before parsing
+    DynamicJsonDocument errorDoc(512);
+    DeserializationError error = deserializeJson(errorDoc, response);
+    if (!error && errorDoc.containsKey("error")) {
+        // RPC error occurred
+        return false;
+    }
+    
+    // Use the existing parseBlockInfo function
+    return parseBlockInfo(response, info);
 }
 
 String RpcClient::getBlockCommitment(uint64_t slot) {
@@ -259,7 +378,29 @@ String RpcClient::getRecentBlockhash() {
 }
 
 String RpcClient::getLatestBlockhash() {
-    return makeRpcRequest("getLatestBlockhash");
+    String response = makeRpcRequest("getLatestBlockhash");
+    
+    if (response.length() == 0) {
+        return "";
+    }
+    
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, response);
+    
+    if (error) {
+        return "";
+    }
+    
+    if (!doc.containsKey("result") || doc["result"].isNull()) {
+        return "";
+    }
+    
+    // Extract blockhash from result.value.blockhash
+    if (doc["result"].containsKey("value") && doc["result"]["value"].containsKey("blockhash")) {
+        return doc["result"]["value"]["blockhash"].as<String>();
+    }
+    
+    return "";
 }
 
 bool RpcClient::getLatestBlockhashBytes(uint8_t* blockhash) {
@@ -267,7 +408,8 @@ bool RpcClient::getLatestBlockhashBytes(uint8_t* blockhash) {
         return false;
     }
     
-    String response = getLatestBlockhash();
+    // Make our own RPC call to get the full JSON response
+    String response = makeRpcRequest("getLatestBlockhash");
     if (response.length() == 0) {
         return false;
     }
@@ -302,7 +444,28 @@ String RpcClient::requestAirdrop(const String& publicKey, uint64_t lamports) {
     // On localnet, there's usually no limit
     String params = "[\"" + publicKey + "\", " + String(lamports) + "]";
     String response = makeRpcRequest("requestAirdrop", params);
-    return response;
+    
+    if (response.length() == 0) {
+        return "";
+    }
+    
+    // Parse JSON response internally and return only the signature
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, response);
+    
+    if (error) {
+        return "";
+    }
+    
+    if (doc.containsKey("error")) {
+        return "";
+    }
+    
+    if (doc.containsKey("result") && !doc["result"].isNull()) {
+        return doc["result"].as<String>();
+    }
+    
+    return "";
 }
 
 String RpcClient::callRpc(const String& method, const String& params) {

@@ -1,52 +1,18 @@
 /**
  * Solduino Airdrop Demo
  * 
- * This example demonstrates requesting SOL airdrops:
- * - Generate a keypair for receiving airdrop
- * - Check initial account balance
- * - Request an airdrop from the network
- * - Verify the airdrop was successful
- * - Check transaction status
+ * Demonstrates requesting SOL airdrops on Solana network.
  * 
  * Hardware: ESP32
- * 
- * Required Libraries:
- * - ArduinoJson (via Library Manager)
- * - Solduino library (includes TweetNaCl)
- * 
- * Security Notes:
- * - Uses ESP32 hardware random number generator for key generation
- * - Private keys are stored securely in memory
- * - Never log or expose private keys in production code
- * - This demo uses devnet/localnet - no real SOL is involved
- * 
- * Setup:
- * 1. Update WiFi credentials below
- * 2. Select ESP32 board in Arduino IDE
- * 3. Upload to ESP32
- * 4. Open Serial Monitor at 115200 baud
- * 
- * For LOCALNET Testing:
- * - Start solana-test-validator: solana-test-validator --bind-address 0.0.0.0
- * - Find your computer's IP address:
- *     macOS/Linux: ifconfig | grep "inet " | grep -v 127.0.0.1
- *     Windows: ipconfig | findstr IPv4
- * - Replace "localhost" with your computer's IP address
- * - Example: Use "http://192.168.1.100:8899" or "http://172.17.53.216:8899"
- * - ESP32 and computer must be on the same WiFi network
+ * Required Libraries: Solduino
  */
 
 #include <WiFi.h>
 #include <solduino.h>
-#include <ArduinoJson.h>
 
-// ============================================================================
 // Configuration
-// ============================================================================
-
-// WiFi credentials
-const char* ssid = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
+const char* ssid = "Parvat's Device";
+const char* password = "Parvat@94255";
 
 // Solana RPC endpoint
 // Options: SOLDUINO_LOCALNET_RPC (for local test-validator)
@@ -77,67 +43,32 @@ const uint64_t AIRDROP_AMOUNT = 1000000000; // 1 SOL
 
 // Initialize Solduino SDK
 Solduino solduino;
-
-// Initialize RPC client
 RpcClient rpcClient(RPC_ENDPOINT);
-
-// ============================================================================
-// Setup
-// ============================================================================
 
 void setup() {
     Serial.begin(115200);
     delay(1000);
     
-    Serial.println("\n\n");
-    Serial.println("========================================");
-    Serial.println("Solduino Airdrop Demo");
-    Serial.println("========================================");
-    Serial.println();
+    Serial.println("Solduino Airdrop Demo\n");
     
-    // Initialize SDK
     if (!solduino.begin()) {
-        Serial.println("[ERROR] Failed to initialize Solduino SDK");
+        Serial.println("ERROR: Failed to initialize SDK");
         return;
     }
     
-    Serial.print("Solduino Version: ");
-    Serial.println(solduino.getVersion());
-    Serial.println();
-    
-    Serial.println("Initializing WiFi connection...");
     connectToWiFi();
     
-    Serial.println("\nInitializing RPC client...");
-    if (rpcClient.begin()) {
-        Serial.println("[SUCCESS] RPC client initialized!");
-        rpcClient.setTimeout(15000); // 15 second timeout
-    } else {
-        Serial.println("[ERROR] Failed to initialize RPC client");
+    if (!rpcClient.begin()) {
+        Serial.println("ERROR: Failed to initialize RPC client");
         return;
     }
     
-    Serial.println("\n=== Starting Airdrop Demo ===\n");
-    
-    // Run airdrop demo
     demonstrateAirdrop();
-    
-    Serial.println("\n=== Demo Complete ===\n");
 }
-
-// ============================================================================
-// Main Loop
-// ============================================================================
 
 void loop() {
-    // Demo runs only once in setup()
-    // This loop is intentionally empty
-    delay(1000); // Small delay to prevent watchdog issues
+    delay(1000);
 }
-
-// ============================================================================
-// WiFi Connection
-// ============================================================================
 
 void connectToWiFi() {
     WiFi.mode(WIFI_STA);
@@ -152,196 +83,64 @@ void connectToWiFi() {
     }
     
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println();
-        Serial.println("[SUCCESS] WiFi connected!");
-        Serial.print("  IP Address: ");
+        Serial.println("\nWiFi connected!");
+        Serial.print("IP: ");
         Serial.println(WiFi.localIP());
     } else {
-        Serial.println();
-        Serial.println("[ERROR] WiFi connection failed!");
-        Serial.println("  Please check your SSID and password");
+        Serial.println("\nWiFi connection failed!");
     }
+    Serial.println();
 }
 
-// ============================================================================
-// Airdrop Demo
-// ============================================================================
-
-/**
- * Demonstrate requesting an airdrop
- */
 void demonstrateAirdrop() {
-    Serial.println("--- Airdrop Demo ---");
-    
-    // Generate a keypair for airdrop
-    Serial.println("\n1. Generating keypair for airdrop...");
+    // Generate keypair
+    Serial.println("Generating keypair...");
     Keypair keypair;
     if (!keypair.generate()) {
-        Serial.println("   ✗ Failed to generate keypair");
+        Serial.println("ERROR: Failed to generate keypair");
         return;
     }
     
     char address[64];
     if (!keypair.getPublicKeyAddress(address, sizeof(address))) {
-        Serial.println("   ✗ Failed to get address");
+        Serial.println("ERROR: Failed to get address");
         return;
     }
-    Serial.print("   ✓ Address: ");
+    Serial.print("Address: ");
     Serial.println(address);
     
     // Check initial balance
-    Serial.println("\n2. Checking initial balance...");
-    String initialBalance = rpcClient.getBalance(address);
-    Serial.print("   Initial Balance Response: ");
-    Serial.println(initialBalance.substring(0, min(200, (int)initialBalance.length())));
-    
-    // Parse initial balance
-    DynamicJsonDocument balanceDoc(512);
-    deserializeJson(balanceDoc, initialBalance);
-    uint64_t initialLamports = 0;
-    if (balanceDoc.containsKey("result") && balanceDoc["result"].containsKey("value")) {
-        initialLamports = balanceDoc["result"]["value"].as<uint64_t>();
-        Serial.print("   Initial Balance: ");
-        Serial.print(initialLamports);
-        Serial.println(" lamports");
-    }
+    uint64_t initialLamports = rpcClient.getBalanceLamports(address);
+    Serial.print("Initial balance: ");
+    Serial.print(initialLamports);
+    Serial.println(" lamports\n");
     
     // Request airdrop
-    Serial.println("\n3. Requesting airdrop...");
-    Serial.print("   Requesting: ");
-    Serial.print(AIRDROP_AMOUNT);
-    Serial.print(" lamports (");
+    Serial.print("Requesting airdrop of ");
     Serial.print((double)AIRDROP_AMOUNT / 1000000000.0, 9);
-    Serial.println(" SOL)");
+    Serial.println(" SOL...");
     
-    unsigned long airdropStart = millis();
-    String airdropResponse = rpcClient.requestAirdrop(address, AIRDROP_AMOUNT);
-    unsigned long airdropTime = millis() - airdropStart;
+    String signature = rpcClient.requestAirdrop(address, AIRDROP_AMOUNT);
     
-    Serial.print("   Response: ");
-    Serial.println(airdropResponse.substring(0, min(300, (int)airdropResponse.length())));
-    
-    // Parse airdrop response
-    DynamicJsonDocument airdropDoc(1024);
-    deserializeJson(airdropDoc, airdropResponse);
-    
-    if (airdropDoc.containsKey("result")) {
-        String signature = airdropDoc["result"].as<String>();
-        Serial.print("   ✓ Airdrop transaction signature: ");
+    if (signature.length() > 0) {
+        Serial.print("Transaction signature: ");
         Serial.println(signature);
-        Serial.print("   Airdrop request time: ");
-        Serial.print(airdropTime);
-        Serial.println(" ms");
         
-        // Wait for transaction to confirm with retry logic
-        Serial.println("\n4. Waiting for transaction confirmation...");
-        bool confirmed = false;
-        uint64_t newLamports = 0;
-        int maxRetries = 10;
-        int retryDelay = 1000; // Start with 1 second
+        // Wait and check balance
+        Serial.println("Waiting for confirmation...");
+        delay(15000); // Wait 15 seconds for transaction to confirm
+        uint64_t newLamports = rpcClient.getBalanceLamports(address);
         
-        for (int retry = 0; retry < maxRetries; retry++) {
-            delay(retryDelay);
-            Serial.print("   Checking balance (attempt ");
-            Serial.print(retry + 1);
-            Serial.print("/");
-            Serial.print(maxRetries);
-            Serial.println(")...");
-            
-            String newBalance = rpcClient.getBalance(address);
-            DynamicJsonDocument newBalanceDoc(512);
-            deserializeJson(newBalanceDoc, newBalance);
-            
-            if (newBalanceDoc.containsKey("result") && newBalanceDoc["result"].containsKey("value")) {
-                newLamports = newBalanceDoc["result"]["value"].as<uint64_t>();
-                
-                if (newLamports > initialLamports) {
-                    confirmed = true;
-                    break;
-                }
-            }
-            
-            // Increase delay for subsequent retries
-            if (retry < maxRetries - 1) {
-                retryDelay = min(2000, retryDelay + 500); // Max 2 seconds per retry
-            }
-        }
+        Serial.print("\nNew balance: ");
+        Serial.print(newLamports);
+        Serial.println(" lamports");
         
-        // Display final balance
-        Serial.println("\n5. Final balance check...");
-        String finalBalance = rpcClient.getBalance(address);
-        DynamicJsonDocument finalBalanceDoc(512);
-        deserializeJson(finalBalanceDoc, finalBalance);
-        
-        if (finalBalanceDoc.containsKey("result") && finalBalanceDoc["result"].containsKey("value")) {
-            newLamports = finalBalanceDoc["result"]["value"].as<uint64_t>();
-            Serial.print("   Final Balance: ");
-            Serial.print(newLamports);
-            Serial.print(" lamports (");
-            Serial.print((double)newLamports / 1000000000.0, 9);
-            Serial.println(" SOL)");
-            
-            if (newLamports > initialLamports) {
-                uint64_t received = newLamports - initialLamports;
-                Serial.print("   ✓ Airdrop successful! Received: ");
-                Serial.print(received);
-                Serial.print(" lamports (");
-                Serial.print((double)received / 1000000000.0, 9);
-                Serial.println(" SOL)");
-                confirmed = true;
-            } else {
-                Serial.println("   ⚠️  Balance hasn't updated yet");
-            }
-        }
-        
-        // Check transaction status
-        Serial.println("\n6. Checking transaction status...");
-        String txResponse = rpcClient.getTransaction(signature);
-        DynamicJsonDocument txDoc(2048);
-        deserializeJson(txDoc, txResponse);
-        
-        if (txDoc.containsKey("result") && !txDoc["result"].isNull()) {
-            Serial.println("   ✓ Transaction found on blockchain");
-            
-            // Try to parse transaction details
-            if (txDoc["result"].containsKey("meta")) {
-                JsonObject meta = txDoc["result"]["meta"];
-                if (meta.containsKey("err")) {
-                    if (meta["err"].isNull()) {
-                        Serial.println("   ✓ Transaction status: SUCCESS");
-                    } else {
-                        Serial.print("   ✗ Transaction error: ");
-                        serializeJson(meta["err"], Serial);
-                        Serial.println();
-                    }
-                }
-            }
-            
-            Serial.print("   Transaction details (first 300 chars): ");
-            Serial.println(txResponse.substring(0, min(300, (int)txResponse.length())));
+        if (newLamports > initialLamports) {
+            Serial.println("SUCCESS: Airdrop received!");
         } else {
-            Serial.println("   ⚠️  Transaction not found in getTransaction response");
-            Serial.println("   Note: Transaction may still be processing or was pruned");
-            Serial.print("   Full response: ");
-            Serial.println(txResponse.substring(0, min(200, (int)txResponse.length())));
+            Serial.println("Pending: Balance not updated yet");
         }
-        
-        // Final status summary
-        Serial.println("\n7. Summary:");
-        if (confirmed) {
-            Serial.println("   ✓ Airdrop completed successfully!");
-        } else {
-            Serial.println("   ⚠️  Airdrop transaction was sent but balance not updated yet");
-            Serial.println("   Transaction signature: " + signature);
-            Serial.println("   Check the transaction on Solana Explorer using the signature above");
-            Serial.println("   The transaction may still be confirming on the network");
-        }
-    } else if (airdropDoc.containsKey("error")) {
-        Serial.print("   ✗ Airdrop failed: ");
-        Serial.println(airdropDoc["error"]["message"].as<String>());
-        Serial.println("   Note: Devnet airdrops are limited. Try localnet for unlimited airdrops.");
     } else {
-        Serial.println("   ⚠️  Unexpected response format");
+        Serial.println("ERROR: Airdrop request failed");
     }
 }
-

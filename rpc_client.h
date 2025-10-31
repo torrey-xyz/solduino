@@ -39,20 +39,20 @@ public:
     void end();
     void setTimeout(int timeout);
     
-    String getAccountInfo(const String& publicKey);
+    bool getAccountInfo(const String& publicKey, AccountInfo& info); // Returns AccountInfo struct, returns false on error
     String getBalance(const String& publicKey);
     uint64_t getBalanceLamports(const String& publicKey); // Returns balance in lamports directly
-    String getBlockHeight();
-    String getSlot();
-    String getVersion();
-    String getHealth();
+    uint64_t getBlockHeight(); // Returns block height directly, or 0 on error
+    uint64_t getSlot(); // Returns current slot directly, or 0 on error
+    String getVersion(); // Returns Solana version string (e.g., "1.18.0"), or empty string on error
+    bool getHealth(); // Returns true if network is healthy, false otherwise
     
     String sendTransaction(const String& transaction);
     String sendTransactionBase58(const String& transaction); // Send transaction with base58 encoding
-    String getTransaction(const String& signature);
+    bool getTransaction(const String& signature, TransactionResponse& tx); // Returns TransactionResponse struct, returns false on error
     String getConfirmedTransaction(const String& signature);
     
-    String getBlock(uint64_t slot);
+    bool getBlock(uint64_t slot, BlockInfo& info); // Returns BlockInfo struct, returns false on error
     String getBlockCommitment(uint64_t slot);
     String getBlocks(uint64_t startSlot, uint64_t endSlot = 0);
     
@@ -62,7 +62,7 @@ public:
     String getTokenSupply(const String& mint);
     
     String getRecentBlockhash(); // Deprecated - use getLatestBlockhash()
-    String getLatestBlockhash();
+    String getLatestBlockhash(); // Returns latest blockhash string (Base58), or empty string on error
     bool getLatestBlockhashBytes(uint8_t* blockhash); // Returns blockhash as bytes (32 bytes), returns false on error
     String getMinimumBalanceForRentExemption(size_t dataSize);
     String getFeeForMessage(const String& message);
@@ -71,7 +71,7 @@ public:
      * Request an airdrop of SOL to an account
      * @param publicKey Public key address (Base58)
      * @param lamports Amount of lamports to airdrop (1 SOL = 1,000,000,000 lamports)
-     * @return JSON RPC response with transaction signature
+     * @return Transaction signature string (Base58), or empty string on error
      */
     String requestAirdrop(const String& publicKey, uint64_t lamports);
     

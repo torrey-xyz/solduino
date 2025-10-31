@@ -44,10 +44,4 @@ void Solduino::hello(void) {
     Serial.print("Version: ");
     Serial.println(getVersion());
     Serial.println("========================================");
-    Serial.println("Modules:");
-    Serial.println("  ✓ RPC Communication");
-    Serial.println("  ✓ Connection Management");
-    Serial.println("  ⚠ Wallet Generation (pending)");
-    Serial.println("  ⚠ Transaction Signing (pending)");
-    Serial.println("========================================");
 }
