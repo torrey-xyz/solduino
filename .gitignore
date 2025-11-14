@@ -96,3 +96,6 @@ test_results/
 # Documentation build
 docs/_build/
 site/
+
+RELEASE_TAGGING_TUTORIAL.md
+todo.md

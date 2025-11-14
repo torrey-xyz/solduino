@@ -48,7 +48,8 @@ const char* ssid = "Parvat's Device";
 const char* password = "Parvat@94255";
 
 // Solana RPC endpoint (using devnet for testing)
-const String RPC_ENDPOINT = SOLDUINO_MAINNET_RPC;
+// const String RPC_ENDPOINT = SOLDUINO_MAINNET_RPC;
+const String RPC_ENDPOINT = "http://10.72.83.234:8899";
 
 // Test account (Solana System Program - always exists)
 const String TEST_ACCOUNT = "11111111111111111111111111111111";

@@ -42,8 +42,6 @@
  #include <ArduinoJson.h>
  #include <string.h>
  
- // Add include for crypto
- #include "crypto.h"
 
  // Optional: disable self-test in production
  #ifndef SOLDUINO_DEBUG
