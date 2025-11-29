@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include "crypto.h"
+#include "instruction.h"
 
 // ============================================================================
 // Solduino Transaction Module
@@ -174,7 +175,28 @@ public:
                                uint64_t amount);
     
     /**
-     * Add a custom instruction to the transaction
+     * Add an Instruction object to the transaction
+     * 
+     * Automatically registers all account keys from the instruction
+     * into the message with their correct signer/writable flags.
+     * Multiple instructions can be composed without calling reset().
+     *
+     * Usage:
+     *   Instruction ix;
+     *   ix.setProgram(programId);
+     *   ix.addKey(payer, true, true);
+     *   ix.writeU64LE(amount);
+     *   tx.add(ix);
+     *
+     * @param instruction The Instruction to add
+     * @return true if successful
+     */
+    bool add(const Instruction& instruction);
+    
+    /**
+     * Add a custom instruction to the transaction (legacy API).
+     * All accounts must already be registered in the message via
+     * getMessage().addAccount() before calling this method.
      * @param programId Program ID public key (32 bytes)
      * @param accounts Array of account public keys
      * @param accountCount Number of accounts

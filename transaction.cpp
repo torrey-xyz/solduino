@@ -193,8 +193,8 @@ bool Transaction::addTransferInstruction(const uint8_t* from,
         return false;
     }
     
-    // Reset message to ensure clean state
-    message.reset();
+    // NOTE: Does NOT call message.reset() so multiple instructions can be
+    // composed in a single transaction. Call tx.reset() explicitly if needed.
     
     // Build canonical accounts: [from(signer,writable), to(writable), system_program(readonly)]
     uint8_t systemProgramId[SOLDUINO_PUBKEY_SIZE];
@@ -234,6 +234,42 @@ bool Transaction::addTransferInstruction(const uint8_t* from,
     }
 
     return true;
+}
+
+bool Transaction::add(const Instruction& instruction) {
+    // Validate instruction has a program set
+    if (!instruction.hasProgram()) {
+        return false;
+    }
+    
+    // 1. Register all account keys from the instruction into the message.
+    //    addAccount handles deduplication and correct ordering automatically.
+    for (uint8_t i = 0; i < instruction.getKeyCount(); i++) {
+        const AccountMeta* meta = instruction.getKey(i);
+        if (!meta) return false;
+        
+        int8_t idx = message.addAccount(meta->pubkey, meta->isSigner, meta->isWritable);
+        if (idx < 0) {
+            return false;
+        }
+    }
+    
+    // 2. Build a pointer array of account pubkeys for the legacy addInstruction path
+    const uint8_t* accountPtrs[MAX_IX_ACCOUNTS];
+    for (uint8_t i = 0; i < instruction.getKeyCount(); i++) {
+        const AccountMeta* meta = instruction.getKey(i);
+        accountPtrs[i] = meta->pubkey;
+    }
+    
+    // 3. Delegate to the existing Message::addInstruction which handles
+    //    program ID registration and CompiledInstruction creation.
+    return message.addInstruction(
+        instruction.getProgram(),
+        accountPtrs,
+        instruction.getKeyCount(),
+        instruction.getData(),
+        instruction.getDataLength()
+    );
 }
 
 bool Transaction::addInstruction(const uint8_t* programId,
