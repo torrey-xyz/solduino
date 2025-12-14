@@ -114,8 +114,14 @@ public:
 #include "crypto.h"
 #include "keypair.h"
 
+// Instruction Builder Module (web3.js-style)
+#include "instruction.h"
+
 // Transaction Signing Module
 #include "transaction.h"
 #include "serializer.h"
+
+// Program Helpers & PDA Derivation
+#include "programs.h"
 
 #endif // SOLDUINO_H
