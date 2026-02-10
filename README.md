@@ -75,6 +75,12 @@ This library depends on:
 
 Install ArduinoJson via Library Manager if not already installed.
 
+Optional libraries for sensor examples:
+- **DHT sensor library** - For `examples/temperature_dht22_demo/`
+- **Adafruit Unified Sensor** - Common dependency for DHT library
+- **max6675** - For `examples/temperature_thermocouple_demo/`
+- **TinyGPSPlus** - For `examples/gps_neo7m_demo/`
+
 ## Quick Start
 
 ### Basic RPC Connection Example
