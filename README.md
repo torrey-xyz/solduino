@@ -166,6 +166,18 @@ sol/
 └── examples/
     ├── basic_rpc_demo/
     │   └── basic_rpc_demo.ino        # Basic RPC operations example
+    ├── sensor_to_chain_demo/
+    │   └── sensor_to_chain_demo.ino  # Generic sensor -> chain workflow
+    ├── temperature_thermistor_demo/
+    │   └── temperature_thermistor_demo.ino   # Thermistor temperature push
+    ├── temperature_thermocouple_demo/
+    │   └── temperature_thermocouple_demo.ino # MAX6675 thermocouple push
+    ├── temperature_dht22_demo/
+    │   └── temperature_dht22_demo.ino        # DHT22 temp+humidity push
+    ├── air_mq135_demo/
+    │   └── air_mq135_demo.ino        # MQ-135 air quality push
+    ├── gps_neo7m_demo/
+    │   └── gps_neo7m_demo.ino        # NEO-7M GPS position push
     ├── wallet_demo/
     │   └── wallet_demo.ino           # Wallet generation and management example
     └── transaction_demo/
