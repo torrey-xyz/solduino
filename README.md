@@ -613,6 +613,17 @@ void monitorNetwork() {
 }
 ```
 
+### Example 5: Sensor-to-Chain Suite
+
+Use these examples for DePIN-style data publishing workflows:
+
+- `examples/sensor_to_chain_demo/sensor_to_chain_demo.ino` - Generic template
+- `examples/temperature_thermistor_demo/temperature_thermistor_demo.ino` - Thermistor
+- `examples/temperature_thermocouple_demo/temperature_thermocouple_demo.ino` - Thermocouple (MAX6675)
+- `examples/temperature_dht22_demo/temperature_dht22_demo.ino` - DHT22 temperature + humidity
+- `examples/air_mq135_demo/air_mq135_demo.ino` - MQ-135 air sensor
+- `examples/gps_neo7m_demo/gps_neo7m_demo.ino` - NEO-7M GPS with TinyGPSPlus
+
 ## API Reference
 
 ### RpcClient Class
