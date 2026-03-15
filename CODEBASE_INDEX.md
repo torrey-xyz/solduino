@@ -4,7 +4,7 @@
 
 **Solduino** is a Solana library for Arduino and ESP32 microcontrollers. It provides tools for wallet generation, transaction signing, and RPC communication with the Solana blockchain.
 
-**Version:** 0.1.0  
+**Version:** 1.0.0  
 **License:** MIT  
 **Target Platforms:** ESP32, ESP32-S2, ESP32-S3, ESP32-C3
 
@@ -629,5 +629,5 @@ When adding new features:
 ---
 
 **Last Updated:** Codebase index created  
-**Version:** 0.1.0
+**Version:** 1.0.0
 

@@ -39,7 +39,7 @@ void setup() {
 - **Operating System**: [e.g., macOS, Windows, Linux]
 
 ## Library Version
-- **Solduino Version**: [e.g., 0.1.0]
+- **Solduino Version**: [e.g., 1.0.0]
 
 ## Error Messages
 ```

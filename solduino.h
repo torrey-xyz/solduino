@@ -15,10 +15,10 @@
 // ============================================================================
 
 // Version information
-#define SOLDUINO_VERSION_MAJOR 0
-#define SOLDUINO_VERSION_MINOR 1
+#define SOLDUINO_VERSION_MAJOR 1
+#define SOLDUINO_VERSION_MINOR 0
 #define SOLDUINO_VERSION_PATCH 0
-#define SOLDUINO_VERSION_STRING "0.1.0"
+#define SOLDUINO_VERSION_STRING "1.0.0"
 
 // Library configuration constants
 #define SOLDUINO_MAX_URL_LENGTH 256
@@ -60,7 +60,7 @@ public:
     
     /**
      * Get library version string
-     * @return Version string (e.g., "0.1.0")
+     * @return Version string (e.g., "1.0.0")
      */
     static const char* getVersion();
     

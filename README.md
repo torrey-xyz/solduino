@@ -1,6 +1,6 @@
 # Solduino - Solana Library for Arduino/ESP32
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/torrey-xyz/solduino)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/torrey-xyz/solduino)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
 
 Solduino is a comprehensive embedded software development kit (SDK) for interacting with the Solana blockchain from Arduino and ESP32 microcontrollers. It provides tools for wallet generation, transaction signing, and RPC communication.
@@ -865,17 +865,13 @@ For issues, questions, or contributions:
 
 ## Changelog
 
-### Version 0.1.0 (Current)
-- Initial release
-- RPC client implementation
-- HTTPS support with WiFiClientSecure
-- Basic account and transaction operations
-- Network monitoring functions
-- Wallet generation with Ed25519
-- Transaction creation and signing
-- Transaction serialization (wire format, Base64, Base58)
-- Message signing and verification
-- Complete example sketches for RPC, wallet, and transactions
+### Version 1.0.0 (Current)
+- First stable release
+- Complete RPC, wallet, and transaction SDK baseline
+- Instruction builder API (`Instruction`, `AccountMeta`, `Transaction::add()`)
+- Program helpers (`SystemProgram`, `TokenProgram`) and PDA derivation support
+- Expanded sensor-to-chain demo suite (thermistor, thermocouple, DHT22, MQ-135, GPS)
+- Updated architecture/docs for sensor integrations and setup
 
 ---
 
