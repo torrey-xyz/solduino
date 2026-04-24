@@ -11,8 +11,8 @@
 #include <solduino.h>
 
 // Configuration
-const char* ssid = "Parvat's Device";
-const char* password = "Parvat@94255";
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "Password";
 
 // Solana RPC endpoint
 // Options: SOLDUINO_LOCALNET_RPC (for local test-validator)
