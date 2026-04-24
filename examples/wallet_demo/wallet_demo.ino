@@ -37,6 +37,7 @@ void setup() {
     // Run demo
     testWalletGeneration();
     testWalletImport();
+    testWalletImportFromJSON();
     
     Serial.println("\n=== Demo Complete ===\n");
 }
@@ -94,5 +95,49 @@ void testWalletImport() {
         Serial.println("✗ Failed to import keypair");
     }
     
+    Serial.println();
+}
+
+/**
+ * Test importing a wallet from solana-keygen JSON byte array
+ */
+void testWalletImportFromJSON() {
+    Serial.println("--- Importing Wallet from solana-keygen JSON ---");
+
+    // Byte array from: solana-keygen new -o dev-solduino.json
+    // Full 64-byte secret key (first 32 = seed, last 32 = pubkey)
+    const uint8_t keypairBytes[64] = {
+        62,90,61,63,130,195,30,214,206,239,94,189,187,215,28,185,
+        231,51,243,89,138,191,56,253,31,157,192,123,246,47,86,228,
+        207,24,159,177,20,217,203,121,160,29,141,184,43,142,214,197,
+        46,27,220,209,107,51,155,196,240,29,192,215,62,248,80,152
+    };
+
+    // Option A: import using all 64 bytes
+    Keypair walletA;
+    if (walletA.importFromPrivateKey(keypairBytes)) {
+        Serial.println("✓ Imported via importFromPrivateKey (64 bytes)");
+        char addr[64];
+        if (walletA.getPublicKeyAddress(addr, sizeof(addr))) {
+            Serial.print("  Address: ");
+            Serial.println(addr);
+        }
+    } else {
+        Serial.println("✗ Failed to import via importFromPrivateKey");
+    }
+
+    // Option B: import using only the first 32 bytes (seed)
+    Keypair walletB;
+    if (walletB.importFromSeed(keypairBytes)) {
+        Serial.println("✓ Imported via importFromSeed (first 32 bytes)");
+        char addr[64];
+        if (walletB.getPublicKeyAddress(addr, sizeof(addr))) {
+            Serial.print("  Address: ");
+            Serial.println(addr);
+        }
+    } else {
+        Serial.println("✗ Failed to import via importFromSeed");
+    }
+
     Serial.println();
 }

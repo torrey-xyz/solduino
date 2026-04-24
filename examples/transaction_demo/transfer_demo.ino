@@ -202,17 +202,16 @@ void demonstrateTransfer() {
      Serial.print("   Receiver: ");
      Serial.println(receiverAddress);
      
-     // Extract keys needed for transaction
-     uint8_t senderPubkey[SOLDUINO_PUBKEY_SIZE];
-     uint8_t receiverPubkey[SOLDUINO_PUBKEY_SIZE];
-     uint8_t senderPrivateKey[SOLDUINO_SECRETKEY_SIZE];
-     
-     if (!senderKeypair.getPublicKey(senderPubkey) || 
-         !receiverKeypair.getPublicKey(receiverPubkey) ||
-         !senderKeypair.getPrivateKey(senderPrivateKey)) {
-         Serial.println("   ✗ Failed to extract keys");
-         return;
-     }
+    // Extract public keys only -- the sender's private key never leaves
+    // the Keypair object; tx.sign(senderKeypair) handles it internally.
+    uint8_t senderPubkey[SOLDUINO_PUBKEY_SIZE];
+    uint8_t receiverPubkey[SOLDUINO_PUBKEY_SIZE];
+    
+    if (!senderKeypair.getPublicKey(senderPubkey) || 
+        !receiverKeypair.getPublicKey(receiverPubkey)) {
+        Serial.println("   ✗ Failed to extract keys");
+        return;
+    }
      
      receiverKeypair.clear();
      
@@ -271,15 +270,13 @@ void demonstrateTransfer() {
      Serial.print((double)TRANSFER_AMOUNT / 1000000000.0, 9);
      Serial.println(" SOL");
      
-     // Sign transaction
-     Serial.println("\n7. Signing transaction...");
-     if (!transaction.sign(senderPrivateKey, senderPubkey)) {
-         Serial.println("   ✗ Failed to sign transaction");
-         return;
-     }
-     
-    memset(senderPrivateKey, 0, sizeof(senderPrivateKey));
-     Serial.println("   ✓ Transaction signed");
+    // Sign transaction
+    Serial.println("\n7. Signing transaction...");
+    if (!transaction.sign(senderKeypair)) {
+        Serial.println("   ✗ Failed to sign transaction");
+        return;
+    }
+    Serial.println("   ✓ Transaction signed");
 
      // Serialize transaction
      Serial.println("\n8. Serializing transaction...");

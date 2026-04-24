@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `Transaction::sign(const Keypair&)` — Keypair-based single-signer API. Private key never leaves the `Keypair` object at the call site and is scrubbed from internal stack buffers after signing.
+- `Transaction::partialSign(const Keypair&)` — mirrors `tx.partialSign(payer)`; adds a signature without clearing previously placed signatures. Enables offline / multi-party multisig flows.
+- `Transaction::sign(const Keypair* const signers[], uint8_t count)` — Keypair-based multi-signer API; clears then applies each signer in order.
+
+### Changed
+- All in-tree examples (sensor demos, `custom_program_demo`, `transaction_demo`) switched to the `Keypair`-based signing API, removing per-call-site private-key buffers.
+- The raw-bytes `sign(const uint8_t*, const uint8_t*)` and `signMultiple(...)` overloads remain supported but are now documented as low-level / legacy.
+
+### Fixed
+- `signMultiple(...)` previously wiped every prior signature on each iteration (via an internal `memset` inside `sign()`), so only the last signer's signature survived. Multi-signer transactions now correctly accumulate all signatures into their respective slots.
+
 ### Planned
 - WebSocket support for real-time subscriptions
 - Certificate validation for HTTPS
@@ -17,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Sensor-to-chain example suite for thermistor, thermocouple, DHT22, MQ-135, and NEO-7M GPS workflows.
-- Web3.js-style instruction composition primitives via `Instruction`, `AccountMeta`, and `Transaction::add()`.
+- instruction composition primitives via `Instruction`, `AccountMeta`, and `Transaction::add()`.
 - Program helper module support including `SystemProgram`, `TokenProgram`, and PDA derivation utilities.
 - Custom program interaction examples and transaction transfer demos.
 

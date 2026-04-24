@@ -323,8 +323,11 @@ sol/
 - `addTransferInstruction(const uint8_t* from, const uint8_t* to, uint64_t amount)` - Add transfer instruction
 - `addInstruction(...)` - Add custom instruction
 - `setRecentBlockhash(const uint8_t* blockhash)` - Set recent blockhash
-- `sign(const uint8_t* privateKey, const uint8_t* publicKey)` - Sign transaction
-- `signMultiple(...)` - Sign with multiple keypairs
+- `sign(const Keypair& signer)` - Sign transaction with a `Keypair`
+- `partialSign(const Keypair& signer)` - Add a signature without clearing existing ones (matches `tx.partialSign(payer)`)
+- `sign(const Keypair* const signers[], uint8_t count)` - Sign with multiple keypairs
+- `sign(const uint8_t* privateKey, const uint8_t* publicKey)` - Low-level / legacy raw-bytes API
+- `signMultiple(...)` - Low-level / legacy multi-signer raw-bytes API
 - `getSignature(uint8_t index, uint8_t* signature)` - Get signature by index
 - `reset()` - Reset transaction
 
@@ -543,7 +546,7 @@ keypair.getPublicKeyAddress(address, sizeof(address));
 Transaction tx;
 tx.addTransferInstruction(fromPubkey, toPubkey, amount);
 tx.setRecentBlockhash(blockhash);
-tx.sign(privateKey, publicKey);
+tx.sign(payerKeypair);
 ```
 
 ### Transaction Serialization:

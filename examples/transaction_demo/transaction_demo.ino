@@ -71,8 +71,12 @@
  * 6) Sign
  *    - For single-signer transactions: sign with the fee payer.
  *    - Note: Solana requires the first signer to be the fee payer.
+ *    - Recommended: pass the Keypair directly
  *
- *    tx.sign(feePayerPrivateKey64, feePayerPubkey32);
+ *    tx.sign(feePayerKeypair);
+ *
+ *    // Or low-level form (legacy):
+ *    // tx.sign(feePayerPrivateKey64, feePayerPubkey32);
  *
  * 7) Serialize for RPC submission
  *    - Solduino provides Base64 and Base58 encoders:

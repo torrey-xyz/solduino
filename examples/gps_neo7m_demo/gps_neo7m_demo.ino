@@ -56,7 +56,6 @@ RpcClient rpcClient(RPC_ENDPOINT);
 
 Keypair authorityKeypair;
 uint8_t authorityPub[SOLDUINO_PUBKEY_SIZE];
-uint8_t authorityPriv[SOLDUINO_SECRETKEY_SIZE];
 uint8_t programId[SOLDUINO_PUBKEY_SIZE];
 uint8_t dataAccountPda[SOLDUINO_PUBKEY_SIZE];
 uint8_t pdaBump;
@@ -120,7 +119,7 @@ bool pushSensorData(int64_t latE7, int64_t lngE7, int64_t sats) {
     uint8_t blockhash[BLOCKHASH_SIZE];
     if (!rpcClient.getLatestBlockhashBytes(blockhash)) return false;
     if (!tx.setRecentBlockhash(blockhash)) return false;
-    if (!tx.sign(authorityPriv, authorityPub)) return false;
+    if (!tx.sign(authorityKeypair)) return false;
     if (!TransactionSerializer::encodeTransactionBase58(tx, g_txBuf, sizeof(g_txBuf))) return false;
 
     String resp = rpcClient.sendTransactionBase58(g_txBuf);
@@ -184,7 +183,6 @@ void setup() {
         while (true) delay(1000);
     }
     authorityKeypair.getPublicKey(authorityPub);
-    authorityKeypair.getPrivateKey(authorityPriv);
 
     if (!addressToPublicKey(PROGRAM_ID_BASE58, programId)) {
         Serial.println("[FATAL] Invalid program ID -- halting.");

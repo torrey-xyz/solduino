@@ -84,7 +84,6 @@ RpcClient rpcClient(RPC_ENDPOINT);
 
 Keypair authorityKeypair;
 uint8_t authorityPub[SOLDUINO_PUBKEY_SIZE];
-uint8_t authorityPriv[SOLDUINO_SECRETKEY_SIZE];
 uint8_t programId[SOLDUINO_PUBKEY_SIZE];
 uint8_t dataAccountPda[SOLDUINO_PUBKEY_SIZE];
 uint8_t pdaBump;
@@ -167,7 +166,7 @@ bool pushSensorData(int64_t sensorValue) {
     tx.setRecentBlockhash(blockhash);
 
     // Sign
-    if (!tx.sign(authorityPriv, authorityPub)) {
+    if (!tx.sign(authorityKeypair)) {
         Serial.println("  [ERROR] Failed to sign");
         return false;
     }
@@ -260,7 +259,6 @@ void setup() {
         while (true) delay(1000);
     }
     authorityKeypair.getPublicKey(authorityPub);
-    authorityKeypair.getPrivateKey(authorityPriv);
 
     char addr[64];
     authorityKeypair.getPublicKeyAddress(addr, sizeof(addr));

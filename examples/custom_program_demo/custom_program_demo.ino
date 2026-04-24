@@ -54,9 +54,7 @@ static char g_txBuf[2048];
 // Helper: send a transaction and print the result
 // ============================================================================
 
-bool sendAndConfirm(Transaction& tx,
-                    const uint8_t* signerPrivateKey,
-                    const uint8_t* signerPublicKey) {
+bool sendAndConfirm(Transaction& tx, const Keypair& signer) {
     // 1. Fresh blockhash
     uint8_t blockhash[BLOCKHASH_SIZE];
     if (!rpcClient.getLatestBlockhashBytes(blockhash)) {
@@ -65,8 +63,8 @@ bool sendAndConfirm(Transaction& tx,
     }
     tx.setRecentBlockhash(blockhash);
 
-    // 2. Sign
-    if (!tx.sign(signerPrivateKey, signerPublicKey)) {
+    // 2. Sign -- Keypair-based API
+    if (!tx.sign(signer)) {
         Serial.println("  [ERROR] Failed to sign transaction");
         return false;
     }
@@ -120,10 +118,9 @@ void demoSystemTransfer() {
     sender.generate();
     receiver.generate();
 
-    uint8_t senderPub[SOLDUINO_PUBKEY_SIZE], senderPriv[SOLDUINO_SECRETKEY_SIZE];
+    uint8_t senderPub[SOLDUINO_PUBKEY_SIZE];
     uint8_t receiverPub[SOLDUINO_PUBKEY_SIZE];
     sender.getPublicKey(senderPub);
-    sender.getPrivateKey(senderPriv);
     receiver.getPublicKey(receiverPub);
 
     char senderAddr[64];
@@ -140,8 +137,7 @@ void demoSystemTransfer() {
     Transaction tx;
     tx.add(SystemProgram::transfer(senderPub, receiverPub, 500000)); // 0.0005 SOL
 
-    sendAndConfirm(tx, senderPriv, senderPub);
-    memset(senderPriv, 0, sizeof(senderPriv));
+    sendAndConfirm(tx, sender);
 }
 
 // ============================================================================
@@ -160,9 +156,8 @@ void demoCustomInstruction() {
     Keypair authority;
     authority.generate();
 
-    uint8_t authPub[SOLDUINO_PUBKEY_SIZE], authPriv[SOLDUINO_SECRETKEY_SIZE];
+    uint8_t authPub[SOLDUINO_PUBKEY_SIZE];
     authority.getPublicKey(authPub);
-    authority.getPrivateKey(authPriv);
 
     // Fake program ID and data account for demonstration
     uint8_t programId[SOLDUINO_PUBKEY_SIZE];
@@ -195,8 +190,6 @@ void demoCustomInstruction() {
 
     Serial.println("  Transaction built successfully");
     Serial.println("  (Not sending -- program ID is a placeholder)");
-
-    memset(authPriv, 0, sizeof(authPriv));
 }
 
 // ============================================================================
