@@ -38,6 +38,7 @@ class Transaction;
 class Message;
 class Instruction;
 class TransactionSerializer;
+class Keypair;
 
 /**
  * Transaction Header
@@ -159,6 +160,9 @@ private:
     uint8_t signatureCount;
     Message message;
     bool isValid;
+    
+    // Used by partialSign() and signMultiple() to accumulate signatures.
+    bool partialSignRaw(const uint8_t* privateKey, const uint8_t* publicKey);
 
 public:
     Transaction();
@@ -218,18 +222,60 @@ public:
     bool setRecentBlockhash(const uint8_t* blockhash);
     
     /**
-     * Sign the transaction with a keypair
+     * Sign the transaction with a Keypair (recommended API).
+     *
+     *
+     * Usage:
+     *   Keypair payer;
+     *   payer.generate();
+     *   tx.sign(payer);
+     *
+     * @param signer Initialized keypair; must be a signer account on the message
+     * @return true if successful
+     */
+    bool sign(const Keypair& signer);
+    
+    /**
+     * Partially sign the transaction with a Keypair (recommended API).
+     *
+     *
+     * @param signer Initialized keypair; must be a signer account on the message
+     * @return true if successful
+     */
+    bool partialSign(const Keypair& signer);
+    
+    /**
+     * Sign the transaction with multiple Keypairs (recommended API).
+     *
+     * Clears existing signatures, then applies each signer in order. All
+     * signers must already be registered as signer accounts on the message.
+     *
+     * @param signers Array of pointers to initialized keypairs
+     * @param count   Number of signers
+     * @return true if all signatures succeeded
+     */
+    bool sign(const Keypair* const signers[], uint8_t count);
+    
+    /**
+     * Sign the transaction with raw key bytes (low-level / legacy API).
+     *
+     * Prefer `sign(const Keypair&)` in new code — it avoids exposing
+     * private key material to the caller's stack.
+     *
      * @param privateKey Private key (64 bytes)
-     * @param publicKey Public key (32 bytes) - must be a signer account
+     * @param publicKey  Public key (32 bytes) - must be a signer account
      * @return true if successful
      */
     bool sign(const uint8_t* privateKey, const uint8_t* publicKey);
     
     /**
-     * Sign the transaction with multiple keypairs
+     * Sign the transaction with multiple raw keypairs (low-level / legacy API).
+     *
+     * Prefer `sign(const Keypair* const signers[], uint8_t)` in new code.
+     *
      * @param privateKeys Array of private keys (64 bytes each)
-     * @param publicKeys Array of public keys (32 bytes each)
-     * @param count Number of keypairs
+     * @param publicKeys  Array of public keys (32 bytes each)
+     * @param count       Number of keypairs
      * @return true if successful
      */
     bool signMultiple(const uint8_t* privateKeys[], 

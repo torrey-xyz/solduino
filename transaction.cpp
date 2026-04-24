@@ -1,6 +1,7 @@
 #include "transaction.h"
 #include "serializer.h"
 #include "crypto.h"
+#include "keypair.h"
 #include <string.h>
 
 // ============================================================================
@@ -285,6 +286,17 @@ bool Transaction::setRecentBlockhash(const uint8_t* blockhash) {
 }
 
 bool Transaction::sign(const uint8_t* privateKey, const uint8_t* publicKey) {
+    // Low-level single-signer entrypoint. Clears any previously placed
+    // signatures, then writes this signer's signature at its slot.
+    // For multi-signer flows, use `signMultiple(...)` or build up partial
+    // signatures via `partialSign(const Keypair&)`.
+    memset(signatures, 0, sizeof(signatures));
+    signatureCount = 0;
+    isValid = false;
+    return partialSignRaw(privateKey, publicKey);
+}
+
+bool Transaction::partialSignRaw(const uint8_t* privateKey, const uint8_t* publicKey) {
     if (!privateKey || !publicKey) {
         return false;
     }
@@ -300,17 +312,10 @@ bool Transaction::sign(const uint8_t* privateKey, const uint8_t* publicKey) {
         }
     }
     
-    // Critical: In Solana, the fee payer (first signer) MUST be at account index 0
-    // Verify the signer is in the correct position for signature verification
+    // Critical: In Solana, the fee payer (first signer) MUST be at account index 0.
+    // Signers must live in the first `numRequiredSignatures` account slots, in order.
     TransactionHeader header = message.getHeader();
     if (signerIndex >= header.numRequiredSignatures) {
-        // Signer is not in the signer accounts section - this is invalid
-        return false;
-    }
-    
-    // Ensure the signer is at the expected position (index 0 for single signer)
-    // For multi-signer transactions, signers must be at indices 0, 1, 2... in order
-    if (signerIndex != 0 && signerIndex >= header.numRequiredSignatures) {
         return false;
     }
     
@@ -328,33 +333,73 @@ bool Transaction::sign(const uint8_t* privateKey, const uint8_t* publicKey) {
         return false;
     }
     
-    // Critical: In Solana, signatures must be stored sequentially for signer accounts
-    // The first numRequiredSignatures accounts are signers, and signatures must be
-    // stored at signatures[0], signatures[1], etc. corresponding to account[0], account[1], etc.
-    // 
-    // If signerIndex is not 0, we have a problem - we can't sign for an account that's not
-    // the first signer in a single-signature transaction. This should never happen if
-    // accounts are added correctly.
-    
-    // Ensure signatureCount matches numRequiredSignatures
-    signatureCount = header.numRequiredSignatures;
-    if (signatureCount == 0) {
+    // signatureCount tracks the number of signer slots the serializer should emit.
+    // It must match numRequiredSignatures so every signer slot is written out
+    // (unsigned slots remain zeroed until their keypair calls partialSign).
+    if (header.numRequiredSignatures == 0) {
         return false;
     }
-    
-    // Store signature at the position matching the signer's account index
-    // Note: signerIndex must be < numRequiredSignatures (we checked earlier)
-    if (signerIndex < signatureCount) {
-        // Zero out all signatures first to ensure clean state
-        memset(signatures, 0, sizeof(signatures));
-        // Store the signature at the correct position
-        memcpy(signatures[signerIndex], signature, SIGNATURE_SIZE);
-    } else {
-        return false;
+    if (signatureCount < header.numRequiredSignatures) {
+        signatureCount = header.numRequiredSignatures;
     }
+    
+    // Place this signer's signature at its account index. Other slots are left
+    // untouched so previously placed partial signatures survive.
+    memcpy(signatures[signerIndex], signature, SIGNATURE_SIZE);
     
     isValid = true;
     return true;
+}
+
+bool Transaction::sign(const Keypair& signer) {
+    if (!signer.isInitialized()) {
+        return false;
+    }
+    
+    uint8_t priv[SOLDUINO_SECRETKEY_SIZE];
+    uint8_t pub[SOLDUINO_PUBKEY_SIZE];
+    bool ok = signer.getPrivateKey(priv) && signer.getPublicKey(pub);
+    if (ok) {
+        ok = this->sign(priv, pub);
+    }
+    // Scrub private key from stack regardless of outcome.
+    memset(priv, 0, sizeof(priv));
+    return ok;
+}
+
+bool Transaction::partialSign(const Keypair& signer) {
+    if (!signer.isInitialized()) {
+        return false;
+    }
+    
+    uint8_t priv[SOLDUINO_SECRETKEY_SIZE];
+    uint8_t pub[SOLDUINO_PUBKEY_SIZE];
+    bool ok = signer.getPrivateKey(priv) && signer.getPublicKey(pub);
+    if (ok) {
+        ok = this->partialSignRaw(priv, pub);
+    }
+    memset(priv, 0, sizeof(priv));
+    return ok;
+}
+
+bool Transaction::sign(const Keypair* const signers[], uint8_t count) {
+    if (!signers || count == 0) {
+        return false;
+    }
+    
+    // Start from a clean slate so a multi-signer sign() matches the
+    // single-signer sign() semantics.
+    memset(signatures, 0, sizeof(signatures));
+    signatureCount = 0;
+    isValid = false;
+    
+    bool allSuccess = true;
+    for (uint8_t i = 0; i < count; i++) {
+        if (!signers[i] || !partialSign(*signers[i])) {
+            allSuccess = false;
+        }
+    }
+    return allSuccess;
 }
 
 bool Transaction::signMultiple(const uint8_t* privateKeys[],
@@ -364,9 +409,16 @@ bool Transaction::signMultiple(const uint8_t* privateKeys[],
         return false;
     }
     
+    // Clear once up front, then accumulate partial signatures. The previous
+    // implementation called sign() in a loop, which wiped each prior
+    // signature and left only the last signer's signature on the transaction.
+    memset(signatures, 0, sizeof(signatures));
+    signatureCount = 0;
+    isValid = false;
+    
     bool allSuccess = true;
     for (uint8_t i = 0; i < count; i++) {
-        if (!sign(privateKeys[i], publicKeys[i])) {
+        if (!partialSignRaw(privateKeys[i], publicKeys[i])) {
             allSuccess = false;
         }
     }
