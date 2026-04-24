@@ -114,7 +114,6 @@ public:
 #include "crypto.h"
 #include "keypair.h"
 
-// Instruction Builder Module (web3.js-style)
 #include "instruction.h"
 
 // Transaction Signing Module

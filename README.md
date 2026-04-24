@@ -359,12 +359,19 @@ tx.addTransferInstruction(fromPubkey, toPubkey, 1000000); // 1 SOL
 tx.setRecentBlockhash(blockhash);
 
 // Sign transaction
-tx.sign(privateKey, fromPubkey);
+tx.sign(payerKeypair);
 
-// Or sign with multiple keypairs
-const uint8_t* privateKeys[] = {keypair1Private, keypair2Private};
-const uint8_t* publicKeys[] = {keypair1Public, keypair2Public};
-tx.signMultiple(privateKeys, publicKeys, 2);
+// Multi-signer: pass an array of Keypair pointers (clears then applies in order)
+const Keypair* signers[] = { &feePayer, &cosigner };
+tx.sign(signers, 2);
+
+// Offline / multi-party flows: build up signatures with partialSign()
+tx.partialSign(feePayer);
+// ...ship tx bytes to the cosigner, who calls tx.partialSign(cosigner)...
+
+// Low-level (legacy) raw-bytes form -- still supported:
+// tx.sign(privateKey, fromPubkey);
+// tx.signMultiple(privateKeys, publicKeys, 2);
 ```
 
 ##### Module 5: Transaction Serialization (`serializer.h` / `serializer.cpp`)
@@ -585,10 +592,8 @@ void setup() {
     tx.addTransferInstruction(fromPubkey, toPubkey, 1000000); // 1 SOL
     tx.setRecentBlockhash(blockhash);
     
-    // Sign transaction
-    uint8_t privateKey[64];
-    sender.getPrivateKey(privateKey);
-    tx.sign(privateKey, fromPubkey);
+    // Sign transaction -- private key never leaves the Keypair object
+    tx.sign(sender);
     
     // Serialize and send
     char serializedTx[2048];
@@ -723,9 +728,12 @@ Transaction()
 - `bool addInstruction(const uint8_t* programId, const uint8_t* accounts[], uint8_t accountCount, const uint8_t* data, uint16_t dataLength)` - Add custom instruction
 - `bool setRecentBlockhash(const uint8_t* blockhash)` - Set recent blockhash (32 bytes)
 
-**Transaction Signing**
-- `bool sign(const uint8_t* privateKey, const uint8_t* publicKey)` - Sign with single keypair
-- `bool signMultiple(const uint8_t* privateKeys[], const uint8_t* publicKeys[], uint8_t count)` - Sign with multiple keypairs
+**Transaction Signing** (prefer the `Keypair`-based overloads — the private key never leaves the object)
+- `bool sign(const Keypair& signer)` - Sign with a single `Keypair`. Clears any existing signatures`.
+- `bool partialSign(const Keypair& signer)` - Sign with a single `Keypair` without clearing other signatures. Use for multi-party / offline multisig. Mirrors `tx.partialSign(payer)`.
+- `bool sign(const Keypair* const signers[], uint8_t count)` - Sign with an array of `Keypair` pointers. Clears first, then applies each in order.
+- `bool sign(const uint8_t* privateKey, const uint8_t* publicKey)` - Low-level / legacy: sign with raw key bytes.
+- `bool signMultiple(const uint8_t* privateKeys[], const uint8_t* publicKeys[], uint8_t count)` - Low-level / legacy: sign with raw key bytes for multiple signers.
 
 **Transaction Information**
 - `Message& getMessage()` - Get transaction message

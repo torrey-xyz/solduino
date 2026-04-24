@@ -15,7 +15,6 @@ struct TransactionResponse;
 
 /**
  * Solana RPC Client for Arduino
- * Provides basic RPC functionality similar to web3.js Connection class
  */
 class RpcClient {
 private:
