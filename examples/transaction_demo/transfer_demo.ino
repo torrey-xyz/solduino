@@ -53,8 +53,8 @@
  // ============================================================================
  
  // WiFi credentials
- const char* ssid = "Parvat's Device";
- const char* password = "Parvat@94255";
+ const char* ssid = "YOUR_WIFI_SSID";
+ const char* password = "YOUR_WIFI_PASSWORD";
  
  // Solana RPC endpoint
  // Options: SOLDUINO_LOCALNET_RPC (for local test-validator)
@@ -287,26 +287,15 @@ void demonstrateTransfer() {
      
      transaction.reset();
      
-     // Send transaction
-     Serial.println("\n9. Sending transaction...");
-    String sendResponse = rpcClient.sendTransactionBase58(g_txBase64);
-    String txSignature;
-     
-     {
-        DynamicJsonDocument doc(512);
-         deserializeJson(doc, sendResponse);
-         
-         if (doc.containsKey("result")) {
-             txSignature = doc["result"].as<String>();
-             Serial.print("   ✓ Transaction sent! Signature: ");
-             Serial.println(txSignature);
-         } else {
-            Serial.print("   ✗ Transaction failed: ");
-            String err = doc.containsKey("error") ? doc["error"]["message"].as<String>() : "Unknown error";
-            Serial.println(err);
-             return;
-         }
-     }
+    // Send transaction
+    Serial.println("\n9. Sending transaction...");
+    String txSignature = rpcClient.sendTransactionBase58(g_txBase64);
+    if (txSignature.length() == 0) {
+        Serial.println("   ✗ Transaction failed");
+        return;
+    }
+    Serial.print("   ✓ Transaction sent! Signature: ");
+    Serial.println(txSignature);
      
     Serial.println("   ⏳ Waiting for confirmation...");
     if (!waitForSignatureConfirmed(txSignature, CONFIRM_TIMEOUT_MS)) {

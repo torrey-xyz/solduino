@@ -122,15 +122,11 @@ bool pushSensorData(int64_t latE7, int64_t lngE7, int64_t sats) {
     if (!tx.sign(authorityKeypair)) return false;
     if (!TransactionSerializer::encodeTransactionBase58(tx, g_txBuf, sizeof(g_txBuf))) return false;
 
-    String resp = rpcClient.sendTransactionBase58(g_txBuf);
-    DynamicJsonDocument doc(512);
-    deserializeJson(doc, resp);
-    if (!doc.containsKey("result")) {
+    String sig = rpcClient.sendTransactionBase58(g_txBuf);
+    if (sig.length() == 0) {
         Serial.println("  [ERROR] sendTransaction failed");
         return false;
     }
-
-    String sig = doc["result"].as<String>();
     Serial.print("  Sent signature: ");
     Serial.println(sig);
 

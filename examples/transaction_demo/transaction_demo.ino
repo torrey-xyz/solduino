@@ -87,13 +87,11 @@
  *    TransactionSerializer::encodeTransactionBase58(tx, txB58, sizeof(txB58));
  *
  * 8) Send via RPC
- *    - IMPORTANT: sendTransactionBase58() returns a JSON string.
- *      You must parse it to extract the signature.
+ *    - sendTransactionBase58() returns the signature (Base58) directly,
+ *      or an empty string on error.
  *
- *    String sendRespJson = rpcClient.sendTransactionBase58(txB58);
- *    // Parse JSON like transfer_demo.ino does:
- *    // - if sendRespJson contains {"result":"<signature>"} => success
- *    // - else {"error":...} => failure
+ *    String sig = rpcClient.sendTransactionBase58(txB58);
+ *    if (sig.length() == 0) { // failure }
  *
  * 9) Confirm + inspect results
  *    - Minimal confirmation in this library:

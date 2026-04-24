@@ -76,20 +76,11 @@ bool sendAndConfirm(Transaction& tx, const Keypair& signer) {
     }
 
     // 4. Send
-    String resp = rpcClient.sendTransactionBase58(g_txBuf);
-    DynamicJsonDocument doc(512);
-    deserializeJson(doc, resp);
-
-    if (!doc.containsKey("result")) {
-        String err = doc.containsKey("error")
-                         ? doc["error"]["message"].as<String>()
-                         : "Unknown error";
-        Serial.print("  [ERROR] ");
-        Serial.println(err);
+    String sig = rpcClient.sendTransactionBase58(g_txBuf);
+    if (sig.length() == 0) {
+        Serial.println("  [ERROR] sendTransaction failed");
         return false;
     }
-
-    String sig = doc["result"].as<String>();
     Serial.print("  Signature: ");
     Serial.println(sig);
 

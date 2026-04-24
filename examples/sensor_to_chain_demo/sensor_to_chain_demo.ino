@@ -179,21 +179,11 @@ bool pushSensorData(int64_t sensorValue) {
 
     // Send
     Serial.println("  Sending transaction...");
-    String resp = rpcClient.sendTransactionBase58(g_txBuf);
-
-    DynamicJsonDocument doc(512);
-    deserializeJson(doc, resp);
-
-    if (!doc.containsKey("result")) {
-        String err = doc.containsKey("error")
-                         ? doc["error"]["message"].as<String>()
-                         : "Unknown";
-        Serial.print("  [ERROR] Send failed: ");
-        Serial.println(err);
+    String sig = rpcClient.sendTransactionBase58(g_txBuf);
+    if (sig.length() == 0) {
+        Serial.println("  [ERROR] Send failed");
         return false;
     }
-
-    String sig = doc["result"].as<String>();
     Serial.print("  Sent! Sig: ");
     Serial.println(sig);
 

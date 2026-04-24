@@ -44,8 +44,8 @@
 // ============================================================================
 
 // WiFi credentials
-const char* ssid = "Parvat's Device";
-const char* password = "Parvat@94255";
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
 
 // Solana RPC endpoint (using devnet for testing)
 // const String RPC_ENDPOINT = SOLDUINO_MAINNET_RPC;
