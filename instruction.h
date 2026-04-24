@@ -27,7 +27,6 @@
 /**
  * Account Metadata
  * Bundles a public key with its signer/writable flags,
- * analogous to web3.js AccountMeta.
  *
  * The pubkey is stored by value (32-byte copy) so the
  * struct is self-contained and safe after the source goes
